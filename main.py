@@ -2,21 +2,23 @@
 import os
 import logging
 from telegram import (
-    Update,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
+    Update, ReplyKeyboardMarkup,
+    InlineKeyboardMarkup, InlineKeyboardButton
 )
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
+    Application, CommandHandler, MessageHandler,
+    CallbackQueryHandler, ContextTypes, filters
 )
 
 logging.basicConfig(level=logging.INFO)
+
 TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID = os.environ.get("ADMIN_ID")
+
+news = []
+clubs = []
+schedule = "Jadval hali kiritilmagan."
+requests = []
 
 MENU = [
     ["🏫 Maktab haqida", "🎯 To‘garaklar"],
@@ -24,80 +26,134 @@ MENU = [
     ["📢 Yangiliklar", "☎️ Bog‘lanish"],
 ]
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = ReplyKeyboardMarkup(
-        [[KeyboardButton(x) for x in row] for row in MENU],
-        resize_keyboard=True,
-    )
-    await update.message.reply_text(
-        "Assalomu alaykum!\n"
-        "🏫 Angren shahridagi 25-maktab axborot botiga xush kelibsiz!\n\n"
-        "Kerakli bo‘limni tanlang:",
-        reply_markup=keyboard,
+def is_admin(update):
+    return (
+        ADMIN_ID
+        and ADMIN_ID.isdigit()
+        and update.effective_user
+        and update.effective_user.id == int(ADMIN_ID)
     )
 
-async def handle_message(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.pop("action", None)
+    keyboard = ReplyKeyboardMarkup(MENU, resize_keyboard=True)
+    await update.message.reply_text(
+        "🏫 Angren shahri 25-maktab botiga xush kelibsiz!\n"
+        "Kerakli bo‘limni tanlang.",
+        reply_markup=keyboard
+    )
+
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update):
+        await update.message.reply_text("⛔ Bu bo‘lim faqat administrator uchun.")
+        return
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 Yangilik qo‘shish", callback_data="news")],
+        [InlineKeyboardButton("🎯 To‘garak qo‘shish", callback_data="club")],
+        [InlineKeyboardButton("📅 Jadvalni o‘zgartirish", callback_data="schedule")],
+        [InlineKeyboardButton("📝 Yozilish so‘rovlari", callback_data="requests")],
+        [InlineKeyboardButton("📋 To‘garaklarni ko‘rish", callback_data="clubs")],
+    ])
+    await update.message.reply_text("🔐 ADMIN PANEL\n\nKerakli amalni tanlang:", reply_markup=keyboard)
+
+async def admin_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if not is_admin(update):
+        await query.edit_message_text("⛔ Ruxsat yo‘q.")
+        return
+
+    action = query.data
+
+    if action == "requests":
+        if not requests:
+            await query.edit_message_text("Hozircha yozilish so‘rovlari yo‘q.")
+        else:
+            result = "\n\n".join(requests[-20:])
+            await query.edit_message_text("📝 SO‘ROVLAR:\n\n" + result[:4000])
+        return
+
+    if action == "clubs":
+        result = "\n".join("• " + c for c in clubs) or "Hozircha to‘garak qo‘shilmagan."
+        await query.edit_message_text("🎯 TO‘GARAKLAR:\n\n" + result[:4000])
+        return
+
+    prompts = {
+        "news": ("news", "📢 E'lon qilinadigan yangilik matnini yubor:"),
+        "club": ("club", "🎯 To‘garak nomi va ma'lumotlarini yubor:"),
+        "schedule": ("schedule", "📅 Yangi jadvalni yubor:")
+    }
+
+    if action in prompts:
+        context.user_data["action"] = prompts[action][0]
+        await query.edit_message_text(prompts[action][1])
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
+    action = context.user_data.get("action")
+
+    if action and is_admin(update):
+        context.user_data.pop("action", None)
+
+        if action == "news":
+            news.append(text)
+            await update.message.reply_text("✅ Yangilik qo‘shildi!")
+
+        elif action == "club":
+            clubs.append(text)
+            await update.message.reply_text("✅ To‘garak qo‘shildi!")
+
+        elif action == "schedule":
+            global schedule
+            schedule = text
+            await update.message.reply_text("✅ Jadval yangilandi!")
+
+        return
+
+    if action == "register":
+        context.user_data.pop("action", None)
+        requests.append(
+            f"Foydalanuvchi ID: {update.effective_user.id}\n"
+            f"To‘garak: {text}"
+        )
+
+        if ADMIN_ID and ADMIN_ID.isdigit():
+            try:
+                await context.bot.send_message(
+                    chat_id=int(ADMIN_ID),
+                    text="📝 Yangi yozilish so‘rovi:\n"
+                         f"Foydalanuvchi ID: {update.effective_user.id}\n"
+                         f"To‘garak: {text}"
+                )
+            except Exception:
+                logging.exception("Administratorga xabar yuborilmadi")
+
+        await update.message.reply_text("✅ So‘rovingiz qabul qilindi!")
+        return
 
     if text == "🏫 Maktab haqida":
-        answer = (
-            "🏫 ANGREN SHAHRI, 25-MAKTAB\n\n"
-            "Maktabimiz haqidagi ma'lumotlar shu bo‘limda "
-            "joylashtiriladi."
-        )
+        answer = "🏫 Angren shahri 25-maktab axborot boti."
     elif text == "🎯 To‘garaklar":
-        answer = (
-            "🎯 MAKTAB TO‘GARAKLARI\n\n"
-            "Bu yerga mavjud to‘garaklar va ularning "
-            "rahbarlari haqidagi tasdiqlangan ma'lumotlar "
-            "kiritiladi."
+        answer = "🎯 TO‘GARAKLAR:\n" + (
+            "\n".join("• " + c for c in clubs)
+            if clubs else "To‘garaklar ma'lumoti hali kiritilmagan."
         )
     elif text == "📅 Jadval":
-        answer = (
-            "📅 TO‘GARAKLAR JADVALI\n\n"
-            "Mashg‘ulot kunlari va vaqtlari maktab "
-            "ma'muriyati tasdiqlaganidan so‘ng kiritiladi."
-        )
+        answer = "📅 JADVAL:\n" + schedule
     elif text == "📝 To‘garakka yozilish":
-        context.user_data["register"] = True
-        await update.message.reply_text(
-            "Qaysi to‘garakka yozilmoqchisiz? "
-            "To‘garak nomini yuboring."
-        )
-        return
-    elif context.user_data.get("register"):
-        context.user_data["register"] = False
-        admin_chat = int(ADMIN_ID) if ADMIN_ID and ADMIN_ID.isdigit() else None
-        if admin_chat:
-            await context.bot.send_message(
-                chat_id=admin_chat,
-                text=(
-                    "📝 Yangi to‘garak so‘rovi\n"
-                    f"Foydalanuvchi ID: {update.effective_user.id}\n"
-                    f"Tanlangan to‘garak: {text}"
-                ),
-            )
-        answer = (
-            "✅ So‘rovingiz qabul qilindi."
-            if admin_chat
-            else "So‘rovingiz qayd etildi. "
-                 "Administrator hali sozlanmagan."
-        )
+        context.user_data["action"] = "register"
+        answer = "Qaysi to‘garakka yozilmoqchisiz? Nomini yuboring."
     elif text == "📢 Yangiliklar":
-        answer = (
-            "📢 MAKTAB YANGILIKLARI\n\n"
-            "Rasmiy yangiliklar shu bo‘limda e'lon qilinadi."
+        answer = "📢 MAKTAB YANGILIKLARI:\n" + (
+            "\n\n".join(news[-10:])
+            if news else "Hozircha yangilik yo‘q."
         )
     elif text == "☎️ Bog‘lanish":
-        answer = (
-            "☎️ BOG‘LANISH\n\n"
-            "Maktabning rasmiy aloqa ma'lumotlari "
-            "keyinchalik shu yerga kiritiladi."
-        )
+        answer = "☎️ Maktabning rasmiy aloqa ma'lumotlari keyin kiritiladi."
     else:
-        answer = "Iltimos, menyudagi bo‘limlardan birini tanlang."
+        answer = "Menyudagi bo‘limlardan birini tanlang."
 
     await update.message.reply_text(answer)
 
@@ -107,11 +163,11 @@ def main():
 
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    )
+    app.add_handler(CommandHandler("admin", admin))
+    app.add_handler(CallbackQueryHandler(admin_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.run_polling()
 
 if __name__ == "__main__":
     main()
-  
+    
