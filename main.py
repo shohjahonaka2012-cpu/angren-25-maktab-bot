@@ -10,7 +10,7 @@ DB_NAME = os.getenv("DB_PATH", "maktab.db")
 if not TOKEN:
     raise ValueError("BOT_TOKEN maxfiy sozlamasini kiriting!")
 
-bot = telebot.TeleBot(8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM)
+bot = telebot.TeleBot(TOKEN)
 waiting = {}
 
 CATEGORIES = {
