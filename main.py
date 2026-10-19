@@ -1,90 +1,89 @@
-import logging
-from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+import telebot
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
 # Siz bergan token va admin ID
-API_TOKEN = '8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM'
+TOKEN = '8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM'
 ADMIN_ID = 7746084734
 
-logging.basicConfig(level=logging.INFO)
+bot = telebot.TeleBot(TOKEN)
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+# Asosiy menyu tugmalari
+def get_main_menu():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(
+        KeyboardButton("🏫 Maktab haqida"),
+        KeyboardButton("🎯 To'garaklar"),
+        KeyboardButton("📅 Jadval"),
+        KeyboardButton("📝 To'garakka yozilish"),
+        KeyboardButton("📢 Yangiliklar"),
+        KeyboardButton("📞 Bog'lanish")
+    )
+    return markup
 
-# --- ASOSIY MENYU TUGMALARI ---
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="🏫 Maktab haqida"), KeyboardButton(text="🎯 To'garaklar")],
-        [KeyboardButton(text="📅 Jadval"), KeyboardButton(text="📝 To'garakka yozilish")],
-        [KeyboardButton(text="📢 Yangiliklar"), KeyboardButton(text="📞 Bog'lanish")]
-    ],
-    resize_keyboard=True
-)
-
-# 1. Start buyrug'i va asosiy menyu
-@dp.message_handler(commands=['start'])
-async def send_welcome(message: types.Message):
-    await message.answer(
+# Start buyrug'i
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.send_message(
+        message.chat.id,
         "Assalomu alaykum! 25-Maktab botiga xush kelibsiz. Kerakli bo'limni tanlang:",
-        reply_markup=main_menu
+        reply_markup=get_main_menu()
     )
 
-# 2. Tugmalar bosilganda ishlaydigan funksiyalar
-@dp.message_handler(text="🏫 Maktab haqida")
-async def about_school(message: types.Message):
-    await message.answer("🏫 25-maktab — bilim maskani! Bu yerda maktab haqida batafsil ma'lumot bo'ladi.")
+# Tugmalar handlerlari
+@bot.message_handler(func=lambda message: message.text == "🏫 Maktab haqida")
+def about_school(message):
+    bot.send_message(message.chat.id, "🏫 25-maktab — bilim maskani! Bu yerda maktab haqida batafsil ma'lumot beriladi.")
 
-@dp.message_handler(text="🎯 To'garaklar")
-async def circles(message: types.Message):
-    await message.answer("🎯 Maktabimizda turli xil fan va sport to'garaklari faoliyat yuritadi.")
+@bot.message_handler(func=lambda message: message.text == "🎯 To'garaklar")
+def circles(message):
+    bot.send_message(message.chat.id, "🎯 Maktabimizda turli xil fan va sport to'garaklari faoliyat yuritadi.")
 
-@dp.message_handler(text="📅 Jadval")
-async def schedule(message: types.Message):
-    await message.answer("📅 Dars jadvali tez orada yangilanadi.")
+@bot.message_handler(func=lambda message: message.text == "📅 Jadval")
+def schedule(message):
+    bot.send_message(message.chat.id, "📅 Dars jadvali tez orada yangilanadi.")
 
-@dp.message_handler(text="📝 To'garakka yozilish")
-async def join_circle(message: types.Message):
-    await message.answer("📝 To'garakka yozilish uchun admin bilan bog'laning yoki ma'lumot qoldiring.")
+@bot.message_handler(func=lambda message: message.text == "📝 To'garakka yozilish")
+def join_circle(message):
+    bot.send_message(message.chat.id, "📝 To'garakka yozilish uchun admin bilan bog'laning.")
 
-@dp.message_handler(text="📢 Yangiliklar")
-async def news(message: types.Message):
-    await message.answer("📢 Maktabimiz yangiliklari bilan tanishib boring.")
+@bot.message_handler(func=lambda message: message.text == "📢 Yangiliklar")
+def news(message):
+    bot.send_message(message.chat.id, "📢 Maktabimiz yangiliklari bilan tanishib boring.")
 
-@dp.message_handler(text="📞 Bog'lanish")
-async def contact(message: types.Message):
-    await message.answer("📞 Biz bilan bog'lanish uchun: +998 XX XXX XX XX")
+@bot.message_handler(func=lambda message: message.text == "📞 Bog'lanish")
+def contact(message):
+    bot.send_message(message.chat.id, "📞 Biz bilan bog'lanish uchun: +998 XX XXX XX XX")
 
 
 # --- ADMIN PANEL ---
 
-# /stats buyrug'i (Faqat admin uchun)
-@dp.message_handler(commands=['stats'])
-async def admin_stats(message: types.Message):
+# /stats buyrug'i
+@bot.message_handler(commands=['stats'])
+def admin_stats(message):
     if message.from_user.id != ADMIN_ID:
-        return await message.answer("❌ Bu buyruq faqat admin uchun!")
-    
-    # Bu yerda bazadagi statistika chiqadi
-    await message.answer("📊 Hozircha botda ro'yxatdan o'tganlar soni bazaga qarab chiqariladi.")
+        bot.send_message(message.chat.id, "❌ Bu buyruq faqat admin uchun!")
+        return
+    bot.send_message(message.chat.id, "📊 Hozircha botda ro'yxatdan o'tganlar soni bazaga qarab chiqariladi.")
 
-# /broadcast buyrug'i (Faqat admin uchun)
-@dp.message_handler(commands=['broadcast'])
-async def admin_broadcast(message: types.Message):
+# /broadcast buyrug'i
+@bot.message_handler(commands=['broadcast'])
+def admin_broadcast(message):
     if message.from_user.id != ADMIN_ID:
-        return await message.answer("❌ Bu buyruq faqat admin uchun!")
+        bot.send_message(message.chat.id, "❌ Bu buyruq faqat admin uchun!")
+        return
     
-    text_to_send = message.get_args()
+    text_to_send = message.text.replace('/broadcast', '').strip()
     if not text_to_send:
-        await message.answer(
-            "Iltimos, yubormoqchi bo'lgan xabaringizni matn bilan birga yozing.\n\n"
-            "Masalan:\n`/broadcast Ertaga darslar soat 08:00 da boshlanadi!`",
+        bot.send_message(
+            message.chat.id,
+            "Iltimos, yubormoqchi bo'lgan xabaringizni matn bilan birga yozing.\n\nMasalan:\n`/broadcast Ertaga darslar soat 08:00 da boshlanadi!`",
             parse_mode="Markdown"
         )
         return
     
-    # Xabar yuborish jarayoni
-    await message.answer(f"✅ Xabar muvaffaqiyatli yuborildi!\n\n**Matn:** {text_to_send}", parse_mode="Markdown")
-
+    bot.send_message(message.chat.id, f"✅ Xabar muvaffaqiyatli yuborildi!\n\n**Matn:** {text_to_send}", parse_mode="Markdown")
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+    print("Bot ishga tushdi...")
+    bot.infinity_polling()
     
