@@ -28,7 +28,7 @@ Maxfiy tokenlar GitHub repository'ga joylashtirilmaydi.
 Angren shahri, 25-maktab.
 
 ## 👨‍💻 Muallif
-Maktab media koordinatori.
+Maktab IT koordinatori.
 
 ## 📈 Holati
 Loyiha ishlab chiqilmoqda.
