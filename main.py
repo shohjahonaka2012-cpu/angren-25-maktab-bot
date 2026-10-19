@@ -1,9 +1,8 @@
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
-# Siz bergan token va admin ID
 TOKEN = '8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM'
-ADMIN_ID = 7746084734
+ADMIN_ID = 7746084734  # Shu yerga o'z Telegram ID raqamingizni yozing
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -20,7 +19,6 @@ def get_main_menu():
     )
     return markup
 
-# Start buyrug'i
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     bot.send_message(
@@ -29,7 +27,7 @@ def send_welcome(message):
         reply_markup=get_main_menu()
     )
 
-# Tugmalar handlerlari
+# Tugmalar
 @bot.message_handler(func=lambda message: message.text == "🏫 Maktab haqida")
 def about_school(message):
     bot.send_message(message.chat.id, "🏫 25-maktab — bilim maskani! Bu yerda maktab haqida batafsil ma'lumot beriladi.")
@@ -55,9 +53,8 @@ def contact(message):
     bot.send_message(message.chat.id, "📞 Biz bilan bog'lanish uchun: +998 XX XXX XX XX")
 
 
-# --- ADMIN PANEL ---
+# --- ADMIN PANEL BUYRUQLARI ---
 
-# /stats buyrug'i
 @bot.message_handler(commands=['stats'])
 def admin_stats(message):
     if message.from_user.id != ADMIN_ID:
@@ -65,7 +62,6 @@ def admin_stats(message):
         return
     bot.send_message(message.chat.id, "📊 Hozircha botda ro'yxatdan o'tganlar soni bazaga qarab chiqariladi.")
 
-# /broadcast buyrug'i
 @bot.message_handler(commands=['broadcast'])
 def admin_broadcast(message):
     if message.from_user.id != ADMIN_ID:
@@ -84,6 +80,6 @@ def admin_broadcast(message):
     bot.send_message(message.chat.id, f"✅ Xabar muvaffaqiyatli yuborildi!\n\n**Matn:** {text_to_send}", parse_mode="Markdown")
 
 if __name__ == '__main__':
-    print("Bot ishga tushdi...")
     bot.infinity_polling()
+    
     
