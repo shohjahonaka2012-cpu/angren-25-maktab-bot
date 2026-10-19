@@ -1,54 +1,90 @@
-import telebot
+import logging
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-# Siz taqdim etgan bot tokeni
-TOKEN = "8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM"
-bot = telebot.TeleBot(TOKEN)
+# Siz bergan token va admin ID
+API_TOKEN = '8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM'
+ADMIN_ID = 7746084734
 
-# Siz taqdim etgan admin ID raqami
-ADMIN_ID = 7746084734  
+logging.basicConfig(level=logging.INFO)
 
-# Start buyrug'i
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Assalomu alaykum! Maktab botimizga xush kelibsiz. 🏫")
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
 
-# Admin panel buyrug'i
-@bot.message_handler(commands=['admin'])
-def admin_panel(message):
-    # Faqat siz yuborgan ID egasi kira olishi uchun shart
-    if message.from_user.id == ADMIN_ID:
-        bot.reply_to(message, 
-                     "👑 **Xush kelibsiz, Hurmatli Maktab Admini!**\n\n"
-                     "Mavjud buyruqlar:\n"
-                     "/stats - Foydalanuvchilar sonini ko'rish\n"
-                     "/broadcast - Barchaga xabar yuborish",
-                     parse_mode="Markdown")
-    else:
-        bot.reply_to(message, "Kechirasiz, sizda bu bo'limga kirish huquqi yo'q. ❌")
+# --- ASOSIY MENYU TUGMALARI ---
+main_menu = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="🏫 Maktab haqida"), KeyboardButton(text="🎯 To'garaklar")],
+        [KeyboardButton(text="📅 Jadval"), KeyboardButton(text="📝 To'garakka yozilish")],
+        [KeyboardButton(text="📢 Yangiliklar"), KeyboardButton(text="📞 Bog'lanish")]
+    ],
+    resize_keyboard=True
+)
 
-# Statistika bo'limi
-@bot.message_handler(commands=['stats'])
-def stats(message):
-    if message.from_user.id == ADMIN_ID:
-        bot.reply_to(message, "📊 Hozircha botda ro'yxatdan o'tganlar soni bazaga qarab chiqariladi.")
-    else:
-        bot.reply_to(message, "Siz admin emassiz! ❌")
+# 1. Start buyrug'i va asosiy menyu
+@dp.message_handler(commands=['start'])
+async def send_welcome(message: types.Message):
+    await message.answer(
+        "Assalomu alaykum! 25-Maktab botiga xush kelibsiz. Kerakli bo'limni tanlang:",
+        reply_markup=main_menu
+    )
 
-# Rassilka (barchaga xabar yuborish)
-@bot.message_handler(commands=['broadcast'])
-def broadcast(message):
-    if message.from_user.id == ADMIN_ID:
-        text = message.text.replace('/broadcast', '').strip()
-        if not text:
-            bot.reply_to(message, "Iltimos, yubormoqchi bo'lgan xabaringizni matn bilan birga yozing.\n"
-                                  "Masalan: `/broadcast Ertaga darslar soat 08:00 da boshlanadi!`", parse_mode="Markdown")
-            return
-        
-        # Bu yerda bazadagi barcha foydalanuvchilarga xabar tarqatish amali bajariladi
-        bot.reply_to(message, "✅ Xabar muvaffaqiyatli yuborildi!")
-    else:
-        bot.reply_to(message, "Siz admin emassiz! ❌")
+# 2. Tugmalar bosilganda ishlaydigan funksiyalar
+@dp.message_handler(text="🏫 Maktab haqida")
+async def about_school(message: types.Message):
+    await message.answer("🏫 25-maktab — bilim maskani! Bu yerda maktab haqida batafsil ma'lumot bo'ladi.")
 
-# Botni ishga tushirish
-print("Bot ishga tushdi...")
-bot.infinity_polling()
+@dp.message_handler(text="🎯 To'garaklar")
+async def circles(message: types.Message):
+    await message.answer("🎯 Maktabimizda turli xil fan va sport to'garaklari faoliyat yuritadi.")
+
+@dp.message_handler(text="📅 Jadval")
+async def schedule(message: types.Message):
+    await message.answer("📅 Dars jadvali tez orada yangilanadi.")
+
+@dp.message_handler(text="📝 To'garakka yozilish")
+async def join_circle(message: types.Message):
+    await message.answer("📝 To'garakka yozilish uchun admin bilan bog'laning yoki ma'lumot qoldiring.")
+
+@dp.message_handler(text="📢 Yangiliklar")
+async def news(message: types.Message):
+    await message.answer("📢 Maktabimiz yangiliklari bilan tanishib boring.")
+
+@dp.message_handler(text="📞 Bog'lanish")
+async def contact(message: types.Message):
+    await message.answer("📞 Biz bilan bog'lanish uchun: +998 XX XXX XX XX")
+
+
+# --- ADMIN PANEL ---
+
+# /stats buyrug'i (Faqat admin uchun)
+@dp.message_handler(commands=['stats'])
+async def admin_stats(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("❌ Bu buyruq faqat admin uchun!")
+    
+    # Bu yerda bazadagi statistika chiqadi
+    await message.answer("📊 Hozircha botda ro'yxatdan o'tganlar soni bazaga qarab chiqariladi.")
+
+# /broadcast buyrug'i (Faqat admin uchun)
+@dp.message_handler(commands=['broadcast'])
+async def admin_broadcast(message: types.Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("❌ Bu buyruq faqat admin uchun!")
+    
+    text_to_send = message.get_args()
+    if not text_to_send:
+        await message.answer(
+            "Iltimos, yubormoqchi bo'lgan xabaringizni matn bilan birga yozing.\n\n"
+            "Masalan:\n`/broadcast Ertaga darslar soat 08:00 da boshlanadi!`",
+            parse_mode="Markdown"
+        )
+        return
+    
+    # Xabar yuborish jarayoni
+    await message.answer(f"✅ Xabar muvaffaqiyatli yuborildi!\n\n**Matn:** {text_to_send}", parse_mode="Markdown")
+
+
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
+    
