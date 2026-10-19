@@ -1,9 +1,10 @@
+
 import os
 import sqlite3
 import telebot
 from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
-TOKEN = os.getenv(8930013741:AAESISBU0_RrF13ZYtAe4NjhaDlxaCJWkUM)
+TOKEN = os.getenv("BOT_TOKEN", "")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "7746084734"))
 DB_NAME = os.getenv("DB_PATH", "maktab.db")
 
@@ -162,7 +163,8 @@ def receive_body(message):
 
     if not is_admin(message):
         return
-        if message.text == "/cancel":
+
+    if message.text == "/cancel":
         waiting.pop(uid, None)
         bot.send_message(message.chat.id, "Bekor qilindi.")
         return
@@ -308,7 +310,8 @@ def edit_body_step(message):
         waiting.pop(message.from_user.id, None)
         bot.send_message(message.chat.id, "Bekor qilindi.")
         return
-        data = waiting.pop(message.from_user.id, None)
+
+    data = waiting.pop(message.from_user.id, None)
     if not data or not message.text:
         bot.send_message(message.chat.id, "Tahrirlash bekor qilindi.")
         return
@@ -441,3 +444,4 @@ def unknown(message):
 
 print("25-maktab boti ishga tushdi!")
 bot.infinity_polling(skip_pending=True)
+             
